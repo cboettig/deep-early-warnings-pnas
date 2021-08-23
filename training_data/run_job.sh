@@ -44,8 +44,8 @@ printf "\n\n"
 
 # Generate a model and output equi.csv, pars.csv
 echo Run gen_model.py
-python3 ../../gen_model.py
-
+cp ../../gen_model.py gen_model.py
+python3 gen_model.py
 
 # Run bifurcation continuation using AUTO, output b.out files for each varied parameter
 # (Make sure runs using Python 2)

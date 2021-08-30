@@ -8,8 +8,8 @@
 # # University of Waterloo
 
 
-# Batch number
-batch_num=1
+# Batch number (for parallel generation?)
+# batch_num=1
 
 
 # Make job-specific directory and move to this directory
@@ -23,8 +23,12 @@ echo Job released
 
 
 # Define variables that count numbers of bifurcations
-bif_max=2 # Number of each type of bifurcation to generate
-batch_num=1 # ID of batch
+bif_max=6250 # Number of each type of bifurcation to generate, 
+# Will generate a total of bif_max * 4 datasets.  
+# 8 datasets take ~ 1 min, so 500,000 will take ~ 43 days
+# Unclear how to determine timeseries length.  seems to currently do 500-length
+
+#batch_num=1 # ID of batch EDIT: ALREADY DEFINED
 hopf_count=0
 fold_count=0
 branch_count=0

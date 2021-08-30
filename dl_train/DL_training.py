@@ -35,7 +35,7 @@ from numpy import argmax
 random.seed(datetime.now())
 
 # job number can be appended to file names in case you want to generate ensemble predictions
-job_number = int(sys.argv[1])
+job_number = 1# int(sys.argv[1])
 
 # keeps track of training metrics
 f1_name = "training_results.txt"
@@ -44,19 +44,25 @@ f2_name = "training_results.csv"
 f_results= open(f1_name, "a+")
 f_results2 = open(f2_name, "a+")
 
-set_size = 500001  # set to size of time series library plus 1
+set_size = 500001  # set to size of time series library plus 1. 
+## Note, ideally set_size would just be computed from the number of timeseries in the archive
 seq_len = 500  # length of input time series 
+## Note: ideally, seq_length would also be computed from the data in the archive.
+
 
 pad_left = 0 # can pad left or right with zeros to replicate unmasking approach used in the paper
 pad_right = 0 
 
+import glob
+resid_files = glob.glob("training_data/output/batch*/output_resids/*.csv")
 # zipfile of time series 
-zf = zipfile.ZipFile('/work/cbauch/EWS/Training17a/Archive.zip')
-text_files = zf.infolist()
+#zf = zipfile.ZipFile('Archive.zip')
+#text_files = zf.infolist()
 sequences = list()
 
-for i in range (1,set_size):
-    df = pandas.read_csv(zf.open('resids'+str(i)+'.csv'))
+for i in resid_files: # (1,set_size):
+    df = pandas.read_csv(i)
+    # df = pandas.read_csv(zf.open('resids'+str(i)+'.csv'))
     keep_col = ['Residuals']
     new_f = df[keep_col]
     values = new_f.values
@@ -65,12 +71,12 @@ for i in range (1,set_size):
 
 sequences = np.array(sequences)
 
-# training labels file
-targets = pandas.read_csv('/work/cbauch/EWS/Training17a/labels.csv')
+# training labels file -- unclear how to adjust over multiple batches
+targets = pandas.read_csv('training_data/output/batch1/output_labels/out_labels.csv')
 targets = targets.values[:,1]
 
 # train/validation/test split denotations
-groups = pandas.read_csv('/work/cbauch/EWS/Training17a/groups.csv', header=0)
+groups = pandas.read_csv('training_data/output/batch1/output_groups/groups.csv', header=0)
 groups = groups.values[:,1]
 
 #Padding input sequences
@@ -102,7 +108,9 @@ final_seq = sequences
 
 # apply train/test/validation labels
 
+## error, index 7 out-of-bounds
 train = [final_seq[i] for i in range(len(groups)) if (groups[i]==1)]
+
 validation = [final_seq[i] for i in range(len(groups)) if groups[i]==2]
 test = [final_seq[i] for i in range(len(groups)) if groups[i]==3]
 
@@ -176,9 +184,14 @@ for kk in range(1,2):
     e_name = ".pkl"
     model_name = a_name+str(b_name)+c_name+str(d_name)+e_name
 
-    adam = Adam(lr=learning_rate_param)
-    chk = ModelCheckpoint(model_name, monitor='val_acc', save_best_only=True, mode='max', verbose=1)
-    model.compile(loss='sparse_categorical_crossentropy', optimizer=adam, metrics=['accuracy', 'val_acc', 'sparse_categorical_accuracy'])
+    adam = Adam(learning_rate=learning_rate_param)
+    chk = ModelCheckpoint(model_name, 
+    #                      monitor='val_acc', 
+                          save_best_only=True, mode='max', verbose=1)
+    model.compile(loss='sparse_categorical_crossentropy', optimizer=adam, 
+                  metrics=['accuracy',
+                           #'val_acc',
+                           'sparse_categorical_accuracy'])
     history = model.fit(train, train_target, epochs=epoch_param, batch_size=batch_param, callbacks=[chk], validation_data=(validation,validation_target))
 
     model = load_model(model_name)
@@ -193,14 +206,14 @@ for kk in range(1,2):
     from sklearn.metrics import precision_score
     from sklearn.metrics import recall_score
     from sklearn.metrics import classification_report 
-    from sklearn import learning_curve
+    from sklearn.model_selection import learning_curve
     
     print(classification_report(test_target, test_preds, digits=3))
 
     print(history.history['accuracy'])
-    print(history.history['val_accuracy'])
+#    print(history.history['val_accuracy'])
     print(history.history['loss'])
-    print(history.history['val_loss'])
+#    print(history.history['val_loss'])
     print("F1 score:",f1_score(test_target, test_preds, average='macro'))
     print("Precision: ",precision_score(test_target, test_preds, average="macro"))
     print("Recall: ",recall_score(test_target, test_preds, average="macro"))    
